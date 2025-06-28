@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Dashboard</title>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #F8F3EC, #DDE6ED);
+            color: #1E3A5F;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .card {
+            background-color: #FFFFFF;
+            border-radius: 20px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            padding: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        h2 {
+            font-weight: 600;
+            color: #27496D;
+        }
+
+        h5 {
+            font-weight: 500;
+            color: #3C6E71;
+        }
+
+        canvas {
+            max-height: 350px;
+        }
+
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            justify-content: space-between;
+        }
+
+        .chart-box {
+            flex: 1 1 45%;
+        }
+
+        @media (max-width: 768px) {
+            .chart-box {
+                flex-basis: 100%;
+            }
+        }
+
+        .btn {
+            background-color: #3C6E71;
+            color: #fff;
+            border: none;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #27496D;
+        }
+
+        .download-btn {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .total-expense {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0C7B93;
+        }
+    </style>
+</head>
+<body class="container py-5">
+
+<!-- Title -->
+<div class="text-center mb-3">
+    <h2 th:text="'Welcome To Your Expense Dashboard'"></h2>
+</div>
+
+<!-- Total Expense Counter -->
+<div class="text-center mb-4">
+    <h4 class="total-expense">Total Expenses: ₹<span id="totalExpense">0</span></h4>
+</div>
+
+<!-- Charts -->
+<div class="chart-container">
+    <!-- Pie Chart -->
+    <div class="chart-box card">
+        <h5 class="text-center mb-3">Category Breakdown</h5>
+        <canvas id="pieChart"></canvas>
+        <div class="text-center">
+            <button class="btn btn-sm download-btn" onclick="downloadChart('pieChart', 'Category_Breakdown')">📥 Download Pie</button>
+        </div>
+    </div>
+
+    <!-- Bar Chart -->
+    <div class="chart-box card">
+        <h5 class="text-center mb-3">Monthly Expense Trend</h5>
+        <canvas id="barChart"></canvas>
+        <div class="text-center">
+            <button class="btn btn-sm download-btn" onclick="downloadChart('barChart', 'Monthly_Trend')">📥 Download Bar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Expense Button -->
+<div class="text-center mt-4">
+    <a href="/expenses" class="btn btn-lg px-4 py-2" title="Click to add a new expense entry">➕ Add Expense</a>
+</div>
+
+<!-- Script -->
+<script th:inline="javascript">
+    const categoryData = [[${categorySummary}]];
+    const months = [[${months}]];
+    const amounts = [[${amounts}]];
+
+    // Extract category data
+    const categoryLabels = Object.keys(categoryData);
+    const categoryValues = Object.values(categoryData);
+
+    // Pie chart colors
+    const pieColors = [
+        "#3C6E71", "#284B63", "#D9D9D9", "#C6AC8F", "#B2B1B9", "#7D98A1"
+    ];
+
+    // PIE CHART
+    new Chart(document.getElementById("pieChart"), {
+        type: 'doughnut',
+        data: {
+            labels: categoryLabels,
+            datasets: [{
+                data: categoryValues,
+                backgroundColor: pieColors,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: {
+                animateScale: true
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // BAR CHART
+    new Chart(document.getElementById("barChart"), {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Monthly Spending (₹)',
+                data: amounts,
+                backgroundColor: "#3C6E71",
+                borderRadius: 6,
+                barThickness: 30
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // TOTAL EXPENSE ANIMATION
+    const total = categoryValues.reduce((a, b) => a + b, 0);
+    const display = document.getElementById('totalExpense');
+    let current = 0;
+    const step = total / 60;
+
+    function animateCounter() {
+        if (current < total) {
+            current += step;
+            display.textContent = Math.floor(current);
+            requestAnimationFrame(animateCounter);
+        } else {
+            display.textContent = total.toFixed(2);
+        }
+    }
+    animateCounter();
+
+    // DOWNLOAD CHART
+    function downloadChart(chartId, filename) {
+        const canvas = document.getElementById(chartId);
+        const link = document.createElement('a');
+        link.download = `${filename}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+</script>
+
+</body>
+</html>
