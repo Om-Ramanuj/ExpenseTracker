@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ExpenseServiceImplimentation implements ExpenseService {
@@ -24,7 +25,7 @@ public class ExpenseServiceImplimentation implements ExpenseService {
     }
 
     @Override
-    public List<Expense> getExpensesByUser(User user) {
+    public List<Expense> getExpensesByUser(Optional<User> user) {
         return expenseRepo.findByUser(user); // ✅ This will work if method exists in repository
     }
 

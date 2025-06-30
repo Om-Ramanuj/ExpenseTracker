@@ -27,11 +27,17 @@ public class UserController {
 
     // Handle registration
     @PostMapping("/register")
-    public String registerUser(@ModelAttribute User user) {
+    public String registerUser(@ModelAttribute User user, Model model) {
+        if (repo.findByUsername(user.getUsername()).isPresent()) {
+            model.addAttribute("error", "Username already exists!");
+            return "register";
+        }
+
         user.setPassword(encoder.encode(user.getPassword()));
         repo.save(user);
         return "redirect:/login";
     }
+
 
     // Login page
     @GetMapping("/login")

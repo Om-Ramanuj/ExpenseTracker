@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/expenses")
@@ -25,40 +26,46 @@ public class ExpenseController {
         this.userRepository = userRepository;
     }
 
-    // ✅ View all expenses
+    // View all expenses
     @GetMapping
     public String viewExpenses(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        User user = userRepository.findByUsername(userDetails.getUsername());
-        List<Expense> expenses = expenseService.getExpensesByUser(user);
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Expense> expenses = expenseService.getExpensesByUser(Optional.ofNullable(user));
         model.addAttribute("expenses", expenses);
-        return "expenses"; // Your expenses.html view
+        return "expenses";
     }
 
-    // ✅ Show form for adding/editing
+    // Show add/edit form
     @GetMapping("/form")
     public String showExpenseForm(@RequestParam(required = false) Long id,
                                   @AuthenticationPrincipal UserDetails userDetails,
                                   Model model) {
+
         Expense expense;
         if (id != null) {
             expense = expenseService.getExpenseById(id);
         } else {
             expense = new Expense();
-            User user = userRepository.findByUsername(userDetails.getUsername());
+            User user = userRepository.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
             expense.setUser(user);
             expense.setDate(LocalDate.now());
         }
 
         model.addAttribute("expense", expense);
-        model.addAttribute("categories", Expense.Category.values()); // ✅ for dropdown options
-        return "expense-form"; // Your expense-form.html
+        model.addAttribute("categories", Expense.Category.values());
+        return "expense-form";
     }
 
-    // ✅ Save expense (POST)
+    // Save expense
     @PostMapping("/add")
     public String saveExpense(@ModelAttribute Expense expense,
                               @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userRepository.findByUsername(userDetails.getUsername());
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         expense.setUser(user);
         if (expense.getDate() == null) {
             expense.setDate(LocalDate.now());
@@ -67,7 +74,7 @@ public class ExpenseController {
         return "redirect:/expenses";
     }
 
-    // ✅ Delete expense
+    // Delete expense
     @GetMapping("/delete/{id}")
     public String deleteExpense(@PathVariable Long id) {
         expenseService.deleteExpense(id);

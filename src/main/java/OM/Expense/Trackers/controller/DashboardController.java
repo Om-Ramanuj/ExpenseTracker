@@ -10,7 +10,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
-import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.TextStyle;
 import java.util.*;
@@ -29,17 +28,19 @@ public class DashboardController {
 
     @GetMapping("/dashboard")
     public String showDashboard(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        User user = userRepository.findByUsername(userDetails.getUsername());
-        List<Expense> expenses = expenseService.getExpensesByUser(user);
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ✅ Pie chart data: Group by category
+        List<Expense> expenses = expenseService.getExpensesByUser(Optional.ofNullable(user));
+
+        // Pie chart data by category
         Map<String, Double> categorySummary = expenses.stream()
                 .collect(Collectors.groupingBy(
                         e -> e.getCategory().toString(),
                         Collectors.summingDouble(Expense::getAmount)
                 ));
 
-        // ✅ Bar/Line chart: Group by Month enum (keeps natural month order)
+        // Monthly chart data
         Map<Month, Double> monthlyMap = expenses.stream()
                 .collect(Collectors.groupingBy(
                         e -> e.getDate().getMonth(),
@@ -47,16 +48,12 @@ public class DashboardController {
                         Collectors.summingDouble(Expense::getAmount)
                 ));
 
-        // Convert to display labels (like Jan, Feb...) and values
         Locale locale = Locale.ENGLISH;
-
         List<String> months = monthlyMap.keySet().stream()
                 .map(m -> m.getDisplayName(TextStyle.SHORT, locale))
                 .collect(Collectors.toList());
-
         List<Double> amounts = new ArrayList<>(monthlyMap.values());
 
-        // ✅ Add to model
         model.addAttribute("categorySummary", categorySummary);
         model.addAttribute("months", months);
         model.addAttribute("amounts", amounts);
