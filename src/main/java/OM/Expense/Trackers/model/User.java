@@ -1,17 +1,21 @@
 package OM.Expense.Trackers.model;
 
 import jakarta.persistence.*;
-
 import java.util.List;
 
 @Entity
+@Table(name = "users") // ✅ Avoid PostgreSQL reserved keyword "user"
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
     private String username;
+
+    @Column(nullable = false)
     private String password;
+
     private String role = "USER";
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
